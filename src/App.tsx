@@ -90,7 +90,7 @@ function App() {
                 alignItems: "center",
             }}
         >
-            <h1>png2matrix | mfaseehuddin</h1>
+            <h1>png2matrix 1.0.0 | mfaseehuddin</h1>
             {image && image.imageFile.type === "image/png" && (
                 <>
                     {/* //display image as img */}
