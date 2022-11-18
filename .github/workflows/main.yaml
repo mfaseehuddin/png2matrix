@@ -1,0 +1,24 @@
+# Continous deployment to server
+
+on:
+  workflow_dispatch:
+  push: 
+    branches: [main]
+
+  name: Deploy to Hostinger via FTP
+  jobs:
+    deploy:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v2
+        
+        - name: FTP Deploy
+          uses: SamKirkland/FTP-Deploy-Action@4.3.2
+          with:
+            server: ${{ secrets.FTP_SERVER }}
+            username: ${{ secrets.FTP_USERNAME }}
+            password: ${{ secrets.FTP_PASSWORD }}
+            port: ${{ secrets.FTP_PORT }}
+            local-dir: ./public
+            server-dir: /public_html/png2matrix/
