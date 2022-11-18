@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./App.css";
 
 function App() {
@@ -9,26 +9,76 @@ function App() {
         width: number;
         height: number;
     }
-
     const [image, setImage] = useState<Image | null>(null);
+    
     //useState for 2d Array
     const [pixelArray, setPixelArray] = useState<number[][] | null>(null);
 
-    // const getImageData = () => {
-    //     //read pixel data from image
-    //     const canvas = document.createElement("canvas");
-    //     const ctx = canvas.getContext("2d");
-    //     const img = new Image();
-    //     img.src = URL.createObjectURL(image?.image);
-    //     img.onload = () => {
-    //         canvas.width = img.width;
-    //         canvas.height = img.height;
-    //         ctx?.drawImage(img, 0, 0);
-    //         const data = ctx?.getImageData(0, 0, img.width, img.height);
-    //         console.log(data);
-    //     }
+    // //const string return function that return hex value from rgba array values
+    // const rgbaToHEX = (rgba: number[]) => {
+    //     return (
+    //         "0x" +
+    //         ((1 << 24) + (rgba[0] << 16) + (rgba[1] << 8) + rgba[2])
+    //             .toString(16)
+    //             .slice(1)
+    //     );
+    // };
 
-    // }
+    const rgbaToRGB = (rgba: number[]) => {
+        return `{${rgba[0]}, ${rgba[1]}, ${rgba[2]}}`;
+    };
+
+    const textarea = useRef<HTMLTextAreaElement>(null);
+    const canvas = useRef<HTMLCanvasElement>(null);
+
+    const setTextAreaText = (text: string) => {
+        if (textarea.current) {
+            if(!image) return;
+            const matrixText = "int " + image.imageFile.name.replace('.','_') + "[" + ((image.height) * (image.width)).toString() + "][3] = {" +  text + "};";
+            textarea.current.value = matrixText;
+        }
+    };
+
+    useEffect(() => {
+        if (!canvas && !image) return;
+        if (!canvas.current || !image) return;
+
+        const img = new Image();
+        img.src = URL.createObjectURL(image.imageFile);
+        img.onload = () => {
+            console.log("image loaded");
+            if (!canvas.current) return;
+            const ctx = canvas.current.getContext("2d");
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                const imageData = ctx.getImageData(
+                    0,
+                    0,
+                    image.width,
+                    image.height
+                );
+                const data = imageData.data;
+                const pixelArray: number[][] = [];
+                for (let i = 0; i < data.length; i += 4) {
+                    pixelArray.push([
+                        data[i],
+                        data[i + 1],
+                        data[i + 2],
+                        data[i + 3],
+                    ]);
+                    setPixelArray(pixelArray);
+                }
+            }
+        };
+    }, [image]);
+
+    useEffect(() => {
+        if (!pixelArray) return;
+        const data: string = pixelArray
+            .map((pixel) => rgbaToRGB(pixel))
+            .join(",\n");
+        setTextAreaText(data);
+    });
 
     return (
         <div
@@ -40,6 +90,7 @@ function App() {
                 alignItems: "center",
             }}
         >
+            <h1>png2matrix | mfaseehuddin</h1>
             {image && image.imageFile.type === "image/png" && (
                 <>
                     {/* //display image as img */}
@@ -52,33 +103,7 @@ function App() {
                     <canvas
                         id="canvas"
                         //draw image on canvas
-                        ref={(canvas) => {
-                            const ctx = canvas?.getContext("2d");
-                            const img = new Image();
-                            img.src = URL.createObjectURL(image.imageFile);
-                            img.onload = () => {
-                                ctx?.drawImage(img, 0, 0);
-                                const data = ctx?.getImageData(
-                                    0,
-                                    0,
-                                    img.width,
-                                    img.height
-                                );
-                                console.log(data);
-                                //how is this data stored? -> in a Uint8ClampedArray, what is the format? -> RGBA, so it is RBGA for each pixel in order?-> yes
-                                const dataArr = [];
-                                if (data) {
-                                    console.log(data.data.length);
-                                    for (let x = 0; x < data.data.length; x += 4) {
-                                        const rowArr = [data.data[x], data.data[x + 1], data.data[x + 2], data.data[x + 3]];
-                                        dataArr.push(rowArr);
-                                    }
-                                    setPixelArray(dataArr);
-                                    console.log(dataArr.length);
-                                    console.log(dataArr);
-                                }
-                            };
-                        }}
+                        ref={canvas}
                     />
                 </>
             )}
@@ -99,21 +124,28 @@ function App() {
                     if (e.target.files) {
                         const img = new Image();
                         img.src = URL.createObjectURL(e.target.files[0]);
-                        setImage({
-                            imageFile: e.target.files[0],
-                            image: img,
-                            width: img.width,
-                            height: img.height,
-                        });
+                        img.onload = () => {
+                            setImage({
+                                image: img,
+                                imageFile: e.target.files![0],
+                                width: img.width,
+                                height: img.height,
+                            });
+                        };
                     }
                 }}
             />
 
             <div>
                 <h3> Image Data </h3>
-                <textarea 
-                value={pixelArray?.toString()}
-                style={{ height: "50vh", width: "50vw" }}></textarea>
+                <textarea
+                    ref={textarea}
+                    // value={pixelArray?.map((row) => {
+                    //     return rgbaToRGB(row) + "\n";
+                    //     return rgbaToRGB(row) + "\n";
+                    // })}
+                    style={{ height: "50vh", width: "50vw" }}
+                ></textarea>
             </div>
         </div>
     );
